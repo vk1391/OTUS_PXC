@@ -1,0 +1,30 @@
+---
+- name: database create
+  hosts: pxc_cluster
+  become: true
+  tags:
+    - dbcr 
+  roles:
+    - database
+- name: copy keys & start
+  hosts: pxc1
+  become: true
+  tags:
+    - copy_keys
+  roles:
+    - keys_and_start
+- name: run cluster on node2-3
+  hosts: pxc2,pxc3 
+  become: true
+  tags:
+    - run23
+  roles:
+    - cluster_start_node2-3
+- name: install proxysql
+  hosts: psql 
+  become: true
+  tags:
+    - prsql
+  roles:
+    - psql_install
+...

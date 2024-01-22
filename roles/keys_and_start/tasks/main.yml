@@ -1,0 +1,27 @@
+- name: Install components for building
+  command: "{{ item }}"
+  with_items: 
+    - mkdir -p /home/vagrant/ssl
+    - cp /var/lib/mysql/server-key.pem /home/vagrant/ssl/
+    - cp /var/lib/mysql/ca.pem /home/vagrant/ssl/
+    - cp /var/lib/mysql/server-cert.pem /home/vagrant/ssl/
+    - chown -R mysql:mysql /home/vagrant/ssl
+- name: register files
+  shell: ls -al ssl/| awk '{print $9}' | sed -n '4,6p'
+  register: files
+- name: copy keys to another hosts
+  fetch:
+    src: /home/vagrant/ssl/{{ item }}
+    dest: ./
+  with_items: 
+    - "{{ files.stdout_lines }}"
+- name: copy keys to nodes
+  copy:
+    src: ./pxc1/home/vagrant/ssl/
+    dest: /var/lib/mysql/
+    owner: mysql
+    group: mysql
+- name: start bootstrap
+  systemd:
+    name: mysql@bootstrap.service
+    state: started

@@ -1,0 +1,10 @@
+- name: copy keys to nodes
+  copy:
+    src: ./pxc1/home/vagrant/ssl/
+    dest: /var/lib/mysql/
+    owner: mysql
+    group: mysql
+- name: start mysql
+  systemd:
+    name: mysql
+    state: started

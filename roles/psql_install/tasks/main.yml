@@ -1,0 +1,69 @@
+- name: Install components for building
+  command: "{{ item }}"
+  with_items: 
+    - sudo yum install https://repo.percona.com/yum/percona-release-latest.noarch.rpm -y
+    - sudo percona-release enable-only pxc-80 release
+    - sudo percona-release enable tools release
+    - sudo yum install percona-xtradb-cluster-client -y
+    - sudo yum install MySQL-python -y
+  ignore_errors: true
+- name: install proxysql
+  yum: 
+    name: proxysql2
+    state: present
+- name: start proxysql
+  systemd: 
+    name: proxysql
+    state: started
+- name: config proxysql
+  command: "{{ item }}"
+  with_items: 
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (1,'192.168.122.205',3306);"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (1,'192.168.122.206',3306);"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="INSERT INTO mysql_servers(hostgroup_id, hostname, port) VALUES (1,'192.168.122.207',3306);"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="SELECT * FROM mysql_servers;"
+  register: err1
+  until: err1.rc == 0
+  retries: 3
+  delay: 2
+- name: config proxysql 2
+  command: "{{ item }}"
+  with_items:   
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="SELECT * FROM monitor.mysql_server_connect_log ORDER BY time_start_us DESC LIMIT 6;"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="SELECT hostgroup_id,hostname,port,status FROM runtime_mysql_servers;"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="LOAD MYSQL SERVERS TO RUNTIME;"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="SAVE MYSQL SERVERS TO DISK;"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="INSERT INTO mysql_replication_hostgroups (writer_hostgroup,reader_hostgroup,comment) VALUES (0,1,'cluster1');"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="LOAD MYSQL SERVERS TO RUNTIME;"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="SAVE MYSQL SERVERS TO DISK;"
+  register: err2
+  until: err2.rc == 0
+  retries: 3
+  delay: 2
+- name: config proxysql 3
+  command: "{{ item }}"
+  with_items: 
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="UPDATE global_variables SET variable_value='proxysql' WHERE variable_name='mysql-monitor_username';"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="UPDATE global_variables SET variable_value='Otus321$' WHERE variable_name='mysql-monitor_password';"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="LOAD MYSQL VARIABLES TO RUNTIME;"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="SAVE MYSQL VARIABLES TO DISK;"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="SELECT * FROM global_variables WHERE variable_name LIKE 'mysql-monitor_%';"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="SELECT * FROM monitor.mysql_server_connect_log ORDER BY time_start_us DESC LIMIT 6;"
+  register: err3
+  until: err3.rc == 0
+  retries: 3
+  delay: 2
+- name: config proxysql 4
+  command: "{{ item }}"
+  with_items: 
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="INSERT INTO mysql_users (username,password) VALUES ('sbuser','Otus321$');"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="LOAD MYSQL USERS TO RUNTIME;"
+    - mysql -u admin -padmin -h 127.0.0.1 -P 6032 --execute="SAVE MYSQL USERS TO DISK;"
+ 
+
+  register: err4
+  until: err4.rc == 0
+  retries: 3
+  delay: 2 
+
+
