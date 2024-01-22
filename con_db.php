@@ -1,7 +1,7 @@
 <?php
 $dbServerName = "192.168.56.208:6033";
 $dbUsername = "sbuser";
-$dbPassword = "password";
+$dbPassword = "Otus321$";
 
 // create connection
 $conn = new mysqli($dbServerName, $dbUsername, $dbPassword);
